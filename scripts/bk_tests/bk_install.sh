@@ -27,14 +27,15 @@ rm /etc/apt/sources.list.d/microsoft-prod.list
 
 echo  "Installing test dependencies"
 apt-get update -y
-apt-get install -y lua5.1 luarocks postgresql-9.6 libsqlite3-dev
+apt-get install -y lua5.1 luarocks postgresql-9.6 libsqlite3-dev # flagging postgresql 9.6 refernce
 
 echo "Configuring postgresql"
-cp /workdir/scripts/bk_tests/pb_hba.conf /etc/postgresql/9.6/main/pg_hba.conf
+cp /workdir/scripts/bk_tests/pb_hba.conf /etc/postgresql/9.6/main/pg_hba.conf # flagging postgresql 9.6 refernce
 
 # the erlang software definition lives in: /omnibus-software/config/software/erlang.rb
 
 # this is needed until the erlang version is installed in the docker container
+# QUESTION: is this still needed?
 echo "Installing erlang 22.2"
 asdf install erlang 22.2
 asdf local erlang 22.2
