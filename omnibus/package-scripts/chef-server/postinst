@@ -29,6 +29,7 @@ chmod o-rwx /etc/opscode/chef-server.rb
 chown -Rh 0:0 /opt/opscode
 
 if [ -e /etc/opscode/chef-server-running.json ]; then
+  echo
   echo -e "\033[1mYou have upgraded Chef Infra Server!\033[0m"
   echo
   echo "The next step in the upgrade process is to run:"
@@ -53,6 +54,7 @@ if [ -e /etc/opscode/chef-server-running.json ]; then
   echo "For detailed upgrade instructions please see:"
   echo "https://docs.chef.io/server/upgrades/"
 else
+  echo
   echo -e "\033[1mThank you for installing Chef Infra Server!\033[0m"
   echo
   echo "Run 'chef-server-ctl reconfigure' to configure your Chef Infra Server"
