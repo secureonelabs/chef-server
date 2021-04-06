@@ -316,7 +316,8 @@ common_user_validation(EJ, User, Operation) ->
     end,
     % Ensure the user can't set this - we make use of it in some cases by setting it internally
     EJ1 = ej:delete({<<"id">>}, EJ),
-    {ok, EJ1}.
+    EJ2 = ej:set({<<"email">>}, EJ1, string:lowercase(ej:get({<<"email">>}, EJ1))),
+    {ok, EJ2}.
 
 external_auth_uid(EJson, #chef_user{external_authentication_uid = ExtAuthUid}) ->
     case ej:get({<<"external_authentication_uid">>}, EJson) of
