@@ -146,6 +146,7 @@ from_json(Req, #base_state{resource_args = invitation_response,
                            chef_db_context = DbContext,
                            requestor_id = RequestorId,
                            resource_state = #user_state{ chef_user = User, user_data = EJ}} = State) ->
+                               io:format("oc_chef_wm_named user - from json - ~p~n",[{User,EJ}]),
     Id = chef_wm_util:object_name(invitation, Req),
     case chef_db:fetch(#oc_chef_org_user_invite{id = Id}, DbContext) of
         not_found ->
@@ -178,12 +179,36 @@ from_json(Req, #base_state{resource_args = invitation_response,
                     {true, chef_wm_util:set_json_body(Req1, EJResponse), State1}
             end
     end;
-from_json(Req, #base_state{server_api_version = ?API_v0,
-                           resource_state = #user_state{ chef_user = User, user_data = UserData}} = State) ->
-    oc_chef_wm_key_base:update_object_embedded_key_data_v0(Req, State, User, UserData);
-from_json(Req, #base_state{resource_state = #user_state{ chef_user = User, user_data = UserData}} = State) ->
+from_json(Req, #base_state{server_api_version = ApiVersion, resource_state = 
+    #user_state{ chef_user = #chef_user{email = OrigEmail} = User, user_data = UserData}} = State) ->
+    NewEmail = ej:get({<<"email">>}, UserData),
+    EmailUpdateConfig = envy:get(oc_chef_wm, disallow_non_manage_email_update, true),
+    RequestOrigin = wrq:get_req_header("x-ops-request-source", Req),
     % in v1+ keys may only be updated via the keys endpoint.
-    oc_chef_wm_base:update_from_json(Req, State, User, UserData).
+    case {NewEmail, RequestOrigin, EmailUpdateConfig, ApiVersion} of
+        {OrigEmail, _, _, ?API_v0} ->
+            io:format("Case 1 - ~p~n",[{NewEmail, RequestOrigin, EmailUpdateConfig, ApiVersion}]),
+            oc_chef_wm_key_base:update_object_embedded_key_data_v0(Req, State, User, UserData);
+        {OrigEmail, _, _, _} ->
+            io:format("Case 2 - ~p~n",[{NewEmail, RequestOrigin, EmailUpdateConfig, ApiVersion}]),
+            oc_chef_wm_base:update_from_json(Req, State, User, UserData);
+        {_, "web", _, ?API_v0} ->
+            io:format("Case 3 - ~p~n",[{NewEmail, RequestOrigin, EmailUpdateConfig, ApiVersion}]),
+            oc_chef_wm_key_base:update_object_embedded_key_data_v0(Req, State, User, UserData);
+        {_, "web", _, _} ->
+            io:format("Case 4 - ~p~n",[{NewEmail, RequestOrigin, EmailUpdateConfig, ApiVersion}]),
+            oc_chef_wm_base:update_from_json(Req, State, User, UserData);
+        {_, Origin, false, ?API_v0} when Origin =/= "web" ->
+            io:format("Case 5 - ~p~n",[{NewEmail, RequestOrigin, EmailUpdateConfig, ApiVersion}]),
+            oc_chef_wm_key_base:update_object_embedded_key_data_v0(Req, State, User, UserData);
+        {_, Origin, false, _} when Origin =/= "web" ->
+            io:format("Case 6 - ~p~n",[{NewEmail, RequestOrigin, EmailUpdateConfig, ApiVersion}]),
+            oc_chef_wm_base:update_from_json(Req, State, User, UserData);
+        _ ->
+            io:format("Case 7 - ~p~n",[{NewEmail, RequestOrigin, EmailUpdateConfig, ApiVersion}]),
+            {{halt, 403}, chef_wm_util:set_json_body(Req, email_update_error_message()), 
+                    State#base_state{log_msg = <<"Use chef-manage to change user email">>}}
+    end.
 
 finalize_update_body(Req, _State, BodyEJ) ->
     %% Custom json body needed to maintain compatibility with opscode-account behavior.
@@ -269,6 +294,9 @@ delete_resource(Req, #base_state{chef_db_context = DbContext,
 conflict_message(Name) ->
     Msg = iolist_to_binary([<<"User '">>, Name, <<"' already exists">>]),
     {[{<<"error">>, [Msg]}]}.
+
+email_update_error_message() ->
+    {[{<<"error">>, <<"Use chef-manage to change user email">>}]}.
 
 malformed_request_message(Any, _Req, _state) ->
     error({unexpected_malformed_request_message, Any}).
