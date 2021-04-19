@@ -244,7 +244,7 @@ def update_to_latest_version
       /opt/opscode/embedded/postgresql/12.5/bin/pg_upgrade
         --old-datadir=#{old_data_dir}
         --new-datadir=#{new_data_dir}
-        --old-bindir=#{old_bins}
+        --old-bindir=/var/opt/opscode/postgresql/9.6/bin
         --new-bindir=/opt/opscode/embedded/postgresql/12.5/bin
         --old-options=" -c config_file=#{::File.join(old_data_dir, 'postgresql.conf')}"
         --new-options=" -c config_file=#{::File.join(new_data_dir, 'postgresql.conf')}"
