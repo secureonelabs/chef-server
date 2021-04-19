@@ -21,15 +21,24 @@ def disable_maintenance
   redis.hdel("dl_default", "503_mode")
 end
 
-def add_ip_to_whitelist(ip)
+def list_allowed_ips()
+  ips = redis.smembers("xmaint_allowed_ips_list")
+  if ips.length == 0
+    puts "- allowed IP list is empty."
+  else
+    puts "- The following IPs are allowed in the maintenance mode \n", ips
+  end
+end
+
+def add_ip_to_allowed_list(ip)
   validate_ip(ip)
-  puts "- Adding #{ip} to whitelist."
+  puts "- Adding #{ip} to allowed list."
   redis.sadd("xmaint_allowed_ips_list", ip)
 end
 
-def remove_ip_from_whitelist(ip)
+def remove_ip_from_allowed_list(ip)
   validate_ip(ip)
-  puts "- Removing #{ip} from whitelist."
+  puts "- Removing #{ip} from allowed list."
   redis.srem("xmaint_allowed_ips_list", ip)
 end
 
@@ -63,17 +72,26 @@ add_command_under_category "maintenance", "general", "Handel the server properly
 
   OptionParser.new do |opts|
 
-    # even if you enable in the redis you have to refresh the shared_dict of nginx lua or reduce the maint_refresh_interval
-    opts.on("-a", "--add-ip [String]", "Add an IP to whitelist") do |a|
+    opts.on("-l", "--list-ips", "List the allowed IPs list") do
+      list_allowed_ips()
+    end
+
+    opts.on("-a", "--add-ip [String]", "Add an IP to allowed list") do |a|
       options[:add_ip] = a
     end
 
-    opts.on("-r", "--remove-ip [String]", "Remove an IP from the whitelist") do |a|
+    opts.on("-r", "--remove-ip [String]", "Remove an IP from the allowed list") do |a|
       options[:remove_ip] = a
+    end
+
+    opts.on("-h", "--help", "Print this help message") do
+      puts opts
+      exit 1
     end
   end.parse!(args)
 
-  add_ip_to_whitelist(options[:add_ip]) if options[:add_ip]
-  remove_ip_from_whitelist(options[:remove_ip]) if options[:remove_ip]
+  list_allowed_ips(options[:add_ip]) if options[:add_ip]
+  add_ip_to_allowed_list(options[:add_ip]) if options[:add_ip]
+  remove_ip_from_allowed_list(options[:remove_ip]) if options[:remove_ip]
 
 end
